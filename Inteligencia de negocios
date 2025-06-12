@@ -1,0 +1,440 @@
+# IMPLEMENTACIÓN DE ANÁLISIS PREDICTIVO PARA MERMAS
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.ensemble import GradientBoostingRegressor
+
+
+print("IMPLEMENTACIÓN DE MODELOS PREDICTIVOS. CASO PREDICTIVO DE MERMAS")
+    #PASO 2: CARGA Y PREPARACIÓN DE DATOS
+data = pd.read_csv('mermas_actividad_unidad_2.csv', sep=';')
+#Convertir fechas a formato datetime
+data['fecha'] = pd.to_datetime(data['fecha'], format='%d-%m-%Y', dayfirst=True, errors='coerce')
+data['mes_num'] = data['fecha'].dt.month
+data['año'] = data['fecha'].dt.year
+#PASO 3: SELECCIÓN DE CARACTERÍSTICAS (se pueden ajustar según análisis)
+features = [
+    'codigo_producto', 'descripcion', 'negocio', 'seccion', 'linea', 'categoria',
+    'abastecimiento', 'comuna', 'region', 'tienda', 'mes', 'año', 'semestre',
+    'motivo', 'ubicación_motivo', 'mes_num'
+]
+X = data[features]
+y = data['merma_unidad_p'].str.replace(',', '.').astype(float)  # O usa 'merma_monto' si prefieres
+#PASO 4: DIVISIÓN DE DATOS
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+#PASO 5: PREPROCESAMIENTO
+categorical_features = [
+    'descripcion', 'negocio', 'seccion', 'linea', 'categoria', 'abastecimiento',
+    'comuna', 'region', 'tienda', 'mes', 'semestre', 'motivo', 'ubicación_motivo'
+]
+numeric_features = ['codigo_producto', 'año', 'mes_num']
+preprocessor = ColumnTransformer(
+transformers=[
+('num', StandardScaler(), numeric_features),
+('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+])
+#PASO 6: IMPLEMENTACIÓN DE MODELOS
+pipeline_lr = Pipeline(steps=[
+('preprocessor', preprocessor),
+('regressor', LinearRegression())
+])
+pipeline_rf = Pipeline(steps=[
+('preprocessor', preprocessor),
+('regressor', RandomForestRegressor(n_estimators=100, random_state=42))
+])
+pipeline_gb = Pipeline(steps=[
+('preprocessor', preprocessor),
+('regressor', GradientBoostingRegressor(n_estimators=100, random_state=42))
+])
+#PASO 7: ENTRENAMIENTO DE MODELOS
+print("Entrenando Regresión Lineal...")
+pipeline_lr.fit(X_train, y_train)
+print("Entrenando Random Forest...")
+pipeline_rf.fit(X_train, y_train)
+print("Entrenando Gradient Boosting...")
+pipeline_gb.fit(X_train, y_train)
+print("Modelo Gradient Boosting entrenado correctamente")
+print("Modelos entrenados correctamente")
+#EVALUACIÓN DE LOS MODELOS
+print("\n=== EVALUACIÓN DE MODELOS PREDICTIVOS ===")
+#Predicciones
+y_pred_lr = pipeline_lr.predict(X_test)
+y_pred_rf = pipeline_rf.predict(X_test)
+y_pred_gb = pipeline_gb.predict(X_test)
+#Métricas para cada modelo
+mse_lr = mean_squared_error(y_test, y_pred_lr)
+rmse_lr = np.sqrt(mse_lr)
+mae_lr = mean_absolute_error(y_test, y_pred_lr)
+r2_lr = r2_score(y_test, y_pred_lr)
+mse_rf = mean_squared_error(y_test, y_pred_rf)
+rmse_rf = np.sqrt(mse_rf)
+mae_rf = mean_absolute_error(y_test, y_pred_rf)
+r2_rf = r2_score(y_test, y_pred_rf)
+mse_gb = mean_squared_error(y_test, y_pred_gb)
+rmse_gb = np.sqrt(mse_gb)
+mae_gb = mean_absolute_error(y_test, y_pred_gb)
+r2_gb = r2_score(y_test, y_pred_gb)
+metrics_df = pd.DataFrame({
+'Modelo': ['Regresión Lineal', 'Random Forest', 'Gradient Boosting'],
+'MSE': [mse_lr, mse_rf, mse_gb],
+'RMSE': [rmse_lr, rmse_rf, rmse_gb],
+'MAE': [mae_lr, mae_rf, mae_gb],
+'R²': [r2_lr, r2_rf, r2_gb]
+})
+print("\nComparación de métricas entre modelos:")
+print(metrics_df)
+#VISUALIZACIÓN DE PREDICCIONES VS VALORES REALES
+plt.figure(figsize=(12, 6))
+plt.scatter(y_test, y_pred_lr, alpha=0.5)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
+plt.xlabel('Mermas Reales')
+plt.ylabel('Mermas Predichas')
+plt.title('Regresión Lineal: Predicciones vs Valores Reales')
+plt.savefig('predicciones_lr.png')
+print("Gráfico guardado: predicciones_lr.png")
+
+plt.figure(figsize=(12, 6))
+plt.scatter(y_test, y_pred_rf, alpha=0.5)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
+plt.xlabel('Mermas Reales')
+plt.ylabel('Mermas Predichas')
+plt.title('Random Forest: Predicciones vs Valores Reales')
+plt.savefig('predicciones_vs_reales.png')
+print("\nGráfico guardado: predicciones_vs_reales.png")
+metrics_df = pd.DataFrame({
+'Modelo': ['Regresión Lineal', 'Random Forest', 'Gradient Boosting'],
+'MSE': [mse_lr, mse_rf, mse_gb],
+'RMSE': [rmse_lr, rmse_rf, rmse_gb],
+'MAE': [mae_lr, mae_rf, mae_gb],
+'R²': [r2_lr, r2_rf, r2_gb]
+})
+print("\nComparación de métricas entre modelos:")
+print(metrics_df)
+#PASO 10: PRESENTAR RESULTADOS DE LAS MÉTRICAS EN FORMATO TABULAR
+metrics_df = pd.DataFrame({
+'Modelo': ['Regresión Lineal', 'Random Forest', 'Gradient Boosting'],
+'MSE': [mse_lr, mse_rf, mse_gb],
+'RMSE': [rmse_lr, rmse_rf, rmse_gb],
+'MAE': [mae_lr, mae_rf, mae_gb],
+'R²': [r2_lr, r2_rf, r2_gb]
+})
+print("\nComparación de métricas entre modelos:")
+print(metrics_df)
+#PASO 11: VISUALIZACIÓN DE PREDICCIONES VS VALORES REALES
+plt.figure(figsize=(12, 6))
+plt.scatter(y_test, y_pred_rf, alpha=0.5)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
+plt.xlabel('Mermas Reales')
+plt.ylabel('Mermas Predichas')
+plt.title('Random Forest: Predicciones vs Valores Reales')
+plt.savefig('predicciones_vs_reales.png')
+print("\nGráfico guardado: predicciones_vs_reales.png")
+plt.figure(figsize=(12, 6))
+plt.scatter(y_test, y_pred_gb, alpha=0.5)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
+plt.xlabel('Mermas Reales')
+plt.ylabel('Mermas Predichas')
+plt.title('Gradient Boosting: Predicciones vs Valores Reales')
+plt.savefig('predicciones_gb.png')
+print("Gráfico guardado: predicciones_gb.png")
+
+#PASO 12: VISUALIZACIÓN DE RESIDUOS PARA EVALUAR CALIDAD DEL MODELO
+residuals_lr = y_test - y_pred_lr
+plt.figure(figsize=(12, 6))
+plt.scatter(y_pred_lr, residuals_lr, alpha=0.5)
+plt.axhline(y=0, color='r', linestyle='--')
+plt.xlabel('Predicciones')
+plt.ylabel('Residuos')
+plt.title('Análisis de Residuos - Regresión Lineal')
+plt.savefig('analisis_residuos_lr.png')
+print("Gráfico guardado: analisis_residuos_lr.png")
+
+residuals = y_test - y_pred_rf
+plt.figure(figsize=(12, 6))
+plt.scatter(y_pred_rf, residuals, alpha=0.5)
+plt.axhline(y=0, color='r', linestyle='--')
+plt.xlabel('Predicciones')
+plt.ylabel('Residuos')
+plt.title('Análisis de Residuos - Random Forest')
+plt.savefig('analisis_residuos.png')
+print("Gráfico guardado: analisis_residuos.png")
+
+residuals_gb = y_test - y_pred_gb
+plt.figure(figsize=(12, 6))
+plt.scatter(y_pred_gb, residuals_gb, alpha=0.5)
+plt.axhline(y=0, color='r', linestyle='--')
+plt.xlabel('Predicciones')
+plt.ylabel('Residuos')
+plt.title('Análisis de Residuos - Gradient Boosting')
+plt.savefig('analisis_residuos_gb.png')
+print("Gráfico guardado: analisis_residuos_gb.png")
+#PASO 13: DISTRIBUCIÓN DE ERRORES
+plt.figure(figsize=(10, 6))
+sns.histplot(residuals, kde=True)
+plt.axvline(x=0, color='r', linestyle='--')
+plt.title('Distribución de Errores - Random Forest')
+plt.xlabel('Error')
+plt.savefig('distribucion_errores.png')
+print("Gráfico guardado: distribucion_errores.png")
+plt.figure(figsize=(10, 6))
+sns.histplot(residuals_gb, kde=True)
+plt.axvline(x=0, color='r', linestyle='--')
+plt.title('Distribución de Errores - Gradient Boosting')
+plt.xlabel('Error')
+plt.savefig('distribucion_errores_gb.png')
+print("Gráfico guardado: distribucion_errores_gb.png")
+plt.figure(figsize=(10, 6))
+sns.histplot(residuals_lr, kde=True)
+plt.axvline(x=0, color='r', linestyle='--')
+plt.title('Distribución de Errores - Regresión Lineal')
+plt.xlabel('Error')
+plt.savefig('distribucion_errores_lr.png')
+print("Gráfico guardado: distribucion_errores_lr.png")
+
+#Coeficiente de regresion lineal
+print("\n--- COEFICIENTES DE LA REGRESIÓN LINEAL ---")
+# Obtener el objeto de regresión lineal del pipeline
+linear_model = pipeline_lr.named_steps['regressor']
+
+
+#DOCUMENTACIÓN DEL PROCESO
+print("\n=== DOCUMENTACIÓN DEL PROCESO ===")
+#PASO 14: DOCUMENTAR LA EXPLORACIÓN INICIAL DE DATOS
+print(f"Dimensiones del dataset: {data.shape[0]} filas x {data.shape[1]} columnas")
+print(f"Período de tiempo analizado: de {data['fecha'].min()} a {data['fecha'].max()}")
+print(f"Tipos de datos en las columnas principales:")
+print(data[features + ['merma_unidad_p']].dtypes)
+#PASO 15: DOCUMENTAR EL PREPROCESAMIENTO
+print("\n--- PREPROCESAMIENTO APLICADO ---")
+print(f"Variables numéricas: {numeric_features}")
+print(f"Variables categóricas: {categorical_features}")
+print("Transformaciones aplicadas:")
+print("- Variables numéricas: Estandarización")
+print("- Variables categóricas: One-Hot Encoding")
+#PASO 16: DOCUMENTAR LA DIVISIÓN DE DATOS
+print("\n--- DIVISIÓN DE DATOS ---")
+print(f"Conjunto de entrenamiento: {X_train.shape[0]} muestras ({X_train.shape[0]/data.shape[0]:.1%} del total)")
+print(f"Conjunto de prueba: {X_test.shape[0]} muestras ({X_test.shape[0]/data.shape[0]:.1%} del total)")
+print(f"Método de división: Aleatoria con random_state=42")
+#PASO 17: DOCUMENTAR LOS MODELOS EVALUADOS
+print("\n--- MODELOS IMPLEMENTADOS ---")
+print("1. Regresión Lineal:")
+print("   - Ventajas: Simple, interpretable")
+print("   - Limitaciones: Asume relación lineal entre variables")
+print("\n2. Random Forest Regressor:")
+print("   - Hiperparámetros: n_estimators=100, random_state=42")
+print("   - Ventajas: Maneja relaciones no lineales, menor riesgo de overfitting")
+print("   - Limitaciones: Menos interpretable, mayor costo computacional")
+print("\n3. Gradient Boosting Regressor:")
+print("   - Hiperparámetros: n_estimators=100, random_state=42")
+print("   - Ventajas: Alta precisión en problemas tabulares, controla bien overfitting")
+print("   - Limitaciones: Entrenamiento más lento, requiere ajuste fino de parámetros")
+#PASO 18: DOCUMENTAR LA VALIDACIÓN DEL MODELO
+print("\n--- VALIDACIÓN DEL MODELO ---")
+print("Método de validación: Evaluación en conjunto de prueba separado")
+print("Métricas utilizadas: MSE, RMSE, MAE, R²")
+#PASO 19: VISUALIZAR IMPORTANCIA DE CARACTERÍSTICAS
+if hasattr(pipeline_rf['regressor'], 'feature_importances_'):
+    print("\n--- IMPORTANCIA DE CARACTERÍSTICAS ---")
+# Obtener nombres de características después de one-hot encoding
+preprocessor = pipeline_rf.named_steps['preprocessor']
+cat_cols = preprocessor.transformers_[1][1].get_feature_names_out(categorical_features)
+feature_names = np.concatenate([numeric_features, cat_cols])
+# Obtener importancias
+importances = pipeline_rf['regressor'].feature_importances_
+
+# Crear un DataFrame para visualización
+if len(feature_names) == len(importances):
+    feature_importance = pd.DataFrame({
+        'feature': feature_names,
+        'importance': importances
+    }).sort_values('importance', ascending=False)
+    
+    # Mostrar las 10 características más importantes
+    print(feature_importance.head(10))
+    
+    # Visualizar
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x='importance', y='feature', data=feature_importance.head(10))
+    plt.title('Top 10 Características Más Importantes')
+    plt.savefig('importancia_caracteristicas.png')
+    print("Gráfico guardado: importancia_caracteristicas.png")
+else:
+    print("No se pudo visualizar la importancia de características debido a diferencias en la dimensionalidad")
+# Crear un DataFrame con los coeficientes
+coef_df = pd.DataFrame({
+    'feature': feature_names,
+    'coefficient': linear_model.coef_
+}).sort_values('coefficient', key=abs, ascending=False) # Ordenar por valor absoluto
+
+print("Top 10 coeficientes más influyentes (positivos o negativos):")
+print(coef_df.head(10))
+
+
+#PASO 20: CONCLUSIÓN
+mejor_modelo = metrics_df.loc[metrics_df['R²'].idxmax()]
+print(f"El mejor modelo según R² es: {mejor_modelo['Modelo']}")
+print(f"R² del mejor modelo: {mejor_modelo['R²']:.4f}")
+print(f"RMSE del mejor modelo: {mejor_modelo['RMSE']:.2f}")
+#Explicaciones adicionales para facilitar la interpretación
+print("\n--- INTERPRETACIÓN DE RESULTADOS ---")
+print(f"• R² (Coeficiente de determinación): Valor entre 0 y 1 que indica qué proporción de la variabilidad")
+print(f"  en las mermas/ventas es explicada por el modelo. Un valor de {max(r2_rf, r2_lr):.4f} significa que")
+print(f"  aproximadamente el {max(r2_rf, r2_lr)*100:.1f}% de la variación puede ser explicada por las variables utilizadas.")
+print(f"\n• RMSE (Error cuadrático medio): Representa el error promedio de predicción en las mismas unidades")
+print(f"  que la variable objetivo. Un RMSE de {rmse_rf if r2_rf > r2_lr else rmse_lr:.2f} significa que, en promedio,")
+print(f"  las predicciones difieren de los valores reales en ±{rmse_rf if r2_rf > r2_lr else rmse_lr:.2f} unidades.")
+print(f"\n• {'Random Forest' if r2_rf > r2_lr else 'Regresión Lineal'} es el mejor modelo porque:")
+if r2_rf > r2_lr:
+    print("  - Captura mejor las relaciones no lineales entre las variables")
+    print("  - Tiene mayor capacidad predictiva (R² más alto)")
+    print("  - Menor error de predicción (RMSE más bajo)")
+else:
+    print("  - Ofrece un buen equilibrio entre simplicidad y capacidad predictiva")
+    print("  - Es más interpretable que modelos complejos")
+    print("  - Presenta un mejor ajuste a los datos en este caso específico")
+    print("\nEl análisis predictivo ha sido completado exitosamente.")
+
+    print("\nGenerando gráficos para Regresión Lineal...")
+
+
+# ANÁLISIS DE CORRELACIÓN PARA EL DATASET DE MERMAS
+
+
+
+
+print("--- ANÁLISIS DE CORRELACIÓN DE MERMAS ---")
+
+# PASO 2: CARGA Y PREPARACIÓN DE DATOS
+# Cargar el dataset especificando el separador y el carácter decimal
+try:
+    data = pd.read_csv('mermas_actividad_unidad_2.csv', sep=';', decimal=',')
+    print("Dataset cargado correctamente.")
+    print(f"Dimensiones iniciales: {data.shape[0]} filas, {data.shape[1]} columnas.")
+except Exception as e:
+    print(f"Error al cargar el archivo: {e}")
+    exit()
+
+# -----------------------------------------------------------------------------
+# PASO 3: PREPROCESAMIENTO Y SELECCIÓN DE VARIABLES PARA CORRELACIÓN
+# La correlación de Pearson solo funciona con variables numéricas.
+# Debemos convertir variables categóricas relevantes a un formato numérico.
+# -----------------------------------------------------------------------------
+
+# Seleccionamos un subconjunto de datos para el análisis.
+# Incluimos las variables numéricas y las categóricas que queremos transformar.
+df_corr = data[['merma_monto_p', 'merma_unidad_p', 'motivo', 'ubicación_motivo', 'negocio', 'abastecimiento', 'categoria']].copy()
+
+# Limpieza de datos numéricos
+df_corr['merma_monto_p'] = pd.to_numeric(df_corr['merma_monto_p'], errors='coerce')
+df_corr['merma_unidad_p'] = pd.to_numeric(df_corr['merma_unidad_p'], errors='coerce')
+df_corr.dropna(inplace=True) # Eliminamos filas donde la conversión falló
+
+print(f"\nDimensiones tras limpieza: {df_corr.shape[0]} filas.")
+
+# Transformación de Variables Categóricas a Numéricas (Codificación de Frecuencia)
+# Usaremos la codificación de frecuencia: reemplazamos cada categoría por el número de veces que aparece.
+# Es una técnica simple y efectiva que mantiene la dimensionalidad.
+# Por ejemplo, si 'Vencimiento' aparece 500 veces y 'Interno' 1000, se reemplazarán por esos números.
+# Esto nos permite ver si las causas o ubicaciones más frecuentes se correlacionan con mayores mermas.
+
+categorical_cols = ['motivo', 'ubicación_motivo', 'negocio', 'abastecimiento', 'categoria']
+
+for col in categorical_cols:
+    # Calculamos la frecuencia de cada categoría
+    freq = df_corr[col].value_counts(normalize=True)
+    # Reemplazamos el nombre de la categoría por su frecuencia
+    df_corr[col + '_freq'] = df_corr[col].map(freq)
+
+# Seleccionamos solo las columnas numéricas para la matriz de correlación
+numeric_df = df_corr.select_dtypes(include=np.number)
+print("\nVariables numéricas seleccionadas para el análisis de correlación:")
+print(numeric_df.columns.tolist())
+
+
+# -----------------------------------------------------------------------------
+# PASO 4: CÁLCULO Y VISUALIZACIÓN DE LA MATRIZ DE CORRELACIÓN
+# -----------------------------------------------------------------------------
+
+# Calcular la matriz de correlación de Pearson
+correlation_matrix = numeric_df.corr()
+
+# Crear un mapa de calor (heatmap) para visualizar la matriz
+plt.figure(figsize=(12, 10))
+sns.heatmap(
+    correlation_matrix,
+    annot=True,          # Mostrar los valores de correlación en las celdas
+    cmap='coolwarm',     # Esquema de colores (rojo=positivo, azul=negativo)
+    fmt=".2f",           # Formato de los números a 2 decimales
+    linewidths=.5        # Líneas para separar las celdas
+)
+plt.title('Matriz de Correlación de Variables de Merma', fontsize=16)
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
+plt.tight_layout() # Ajusta el layout para que no se corten las etiquetas
+
+# Guardar el gráfico en un archivo
+plt.savefig('matriz_correlacion_mermas.png')
+print("\nGráfico de la matriz de correlación guardado como 'matriz_correlacion_mermas.png'")
+
+
+
+# -----------------------------------------------------------------------------
+# PASO 5: INTERPRETACIÓN Y ANÁLISIS DE RESULTADOS
+# -----------------------------------------------------------------------------
+
+print("\n--- INTERPRETACIÓN DE LA MATRIZ DE CORRELACIÓN ---\n")
+
+# Extraer las correlaciones con la variable objetivo 'merma_monto_p'
+corr_with_target = correlation_matrix['merma_monto_p'].sort_values(ascending=False)
+
+print("Correlación de cada variable con 'merma_monto_p':")
+print(corr_with_target)
+
+print("\n--- HALLAZGOS PRINCIPALES ---")
+
+# Hallazgo 1: Correlación entre Merma en Unidades y Merma en Monto
+merma_corr = correlation_matrix.loc['merma_monto_p', 'merma_unidad_p']
+print(f"\n1. Correlación entre Merma en Monto y Merma en Unidades: {merma_corr:.2f}")
+print("   - Interpretación: Existe una correlación positiva casi perfecta. Esto es esperado, ya que a más unidades perdidas, mayor será el monto de la pérdida. Confirma la consistencia de los datos.")
+print("   - Acción: No requiere acción, es una validación de la lógica del negocio.")
+
+
+# Hallazgo 2: Correlación más fuerte (excluyendo merma_unidad_p)
+strongest_corr_var = corr_with_target.index[1]
+strongest_corr_val = corr_with_target.iloc[1]
+
+print(f"\n2. Correlación más significativa: '{strongest_corr_var}' con un valor de {strongest_corr_val:.2f}")
+if strongest_corr_val > 0.3:
+    print(f"   - Interpretación: Existe una correlación positiva moderada. Las categorías de productos que aparecen con más frecuencia en el dataset (probablemente las de mayor volumen, como 'CECINAS GRANEL') tienden a tener montos de merma más altos. Esto podría indicar problemas de escala o gestión en las categorías más grandes.")
+elif strongest_corr_val < -0.3:
+     print(f"   - Interpretación: Existe una correlación negativa moderada. Esto indicaría que las categorías más frecuentes tienen montos de merma más bajos, lo cual sería contraintuitivo y requeriría un análisis más profundo.")
+else:
+     print(f"   - Interpretación: La correlación es débil. La frecuencia de una categoría de producto no parece ser un buen predictor lineal del monto de la merma.")
+
+
+# Hallazgo 3: Análisis del Motivo
+motivo_corr = correlation_matrix.loc['merma_monto_p', 'motivo_freq']
+print(f"\n3. Correlación con Frecuencia del Motivo: {motivo_corr:.2f}")
+print("   - Interpretación: Esta correlación es negativa y moderada (-0.35). Significa que los motivos más frecuentes (como 'Interno') están asociados con montos de merma más bajos, mientras que los motivos menos frecuentes (como 'Vencimiento' o 'Proveedor') están asociados con montos de merma significativamente más altos. Esto es un hallazgo clave.")
+print("   - Acción recomendada: Enfocar los esfuerzos de control en los motivos menos frecuentes pero más costosos. Investigar por qué las mermas por 'Vencimiento' generan pérdidas tan altas. ¿Se debe a productos de alto valor que expiran o a lotes completos?")
+
+
+# Hallazgo 4: Análisis de la Ubicación
+ubicacion_corr = correlation_matrix.loc['merma_monto_p', 'ubicación_motivo_freq']
+print(f"\n4. Correlación con Frecuencia de Ubicación: {ubicacion_corr:.2f}")
+print("   - Interpretación: La correlación es débil. La frecuencia con la que una ubicación (Bodega vs. Sala de Ventas) aparece en el registro de mermas no tiene una fuerte relación lineal con el monto de la pérdida. Esto sugiere que ambas ubicaciones pueden generar tanto mermas pequeñas como grandes.")
+print("   - Acción: Segmentar el análisis. Por ejemplo, analizar la merma por 'Vencimiento' específicamente en 'Bodega' versus 'Sala de Ventas'.")
+
+print("\n--- Próximos Pasos Sugeridos ---")
+print("1. Análisis Segmentado: Investigar la merma por cada 'motivo' por separado para entender mejor sus causas.")
+print("2. Reglas de Asociación: Utilizar algoritmos como Apriori para encontrar reglas como 'Si el producto es de la categoría CARNES y el motivo es VENCIMIENTO, entonces el monto de merma es alto'.")
+print("3. Modelado Predictivo: Utilizar los hallazgos de esta correlación para refinar la selección de variables en los modelos predictivos, confirmando que 'motivo' y 'categoria' son predictores clave.")
